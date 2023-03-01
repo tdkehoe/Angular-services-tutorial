@@ -244,3 +244,38 @@ async callMe() {
 
 The calling function is async. The Observer is preceded by `await` and enclosed in self-executing parantheses.
 
+### Async set and get
+
+Let's send a value to a setter service function, access the database, and return the data to the caller.
+
+*my-component.ts*
+```js
+this.homeToolbarService.setPronunciations('kitten');
+  (await
+      this.homeToolbarService.getPronunciations()).subscribe((array: Pronunciation[]) => {
+        console.table(array);
+    });
+```
+
+We pass a value to the setter synchronously, then make an async Observor to wait for the response from the getter.
+
+*my-service.service.ts*
+```js
+  pronunciations: Pronunciation[] = [];
+  pronunciationsObservable: BehaviorSubject<Pronunciation[]> = new BehaviorSubject(this.pronunciations);
+  async setPronunciations(word: string): Promise<void> {
+    this.pronunciations = [];
+    const pronunciationsRef = 'Dictionaries/' + this.l2Language.long + '/Words/' + word + '/Pronunciations/';
+    this.querySnapshot = await getDocs(collection(this.firestore, pronunciationsRef));
+    this.querySnapshot.forEach((document: any) => {
+      console.table(document.data());
+      this.pronunciations.push(document.data());
+    });
+    this.pronunciationsObservable.next(this.pronunciations);
+  }
+  async getPronunciations(): Promise<Observable<Pronunciation[]>> {
+    return this.pronunciationsObservable.asObservable();
+  }
+```
+
+We call the database asynchronously to get a collection, iterate through the collection to make an array, and pass the array to the Observable getter service function.
